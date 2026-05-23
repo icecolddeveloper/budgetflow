@@ -1240,6 +1240,11 @@ p {
   box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12);
 }
 
+.field select option {
+  background-color: var(--surface-strong);
+  color: var(--text);
+}
+
 .field textarea {
   resize: vertical;
 }

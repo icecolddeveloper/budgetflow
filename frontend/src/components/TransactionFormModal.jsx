@@ -134,7 +134,7 @@ export function TransactionFormModal({ categories, onClose, onSubmit }) {
   return (
     <ModalShell
       title="New transaction"
-      description="Move money with a single action and keep every category balance up to date."
+      description="Log income, an expense, or move funds between envelopes."
       onClose={onClose}
     >
       <form className="modal-form" onSubmit={handleSubmit}>
@@ -215,7 +215,7 @@ export function TransactionFormModal({ categories, onClose, onSubmit }) {
               name="description"
               value={form.description}
               onChange={updateField}
-              placeholder="Add context like weekly groceries or rent transfer."
+              placeholder="What was this for? e.g. weekly groceries"
             />
           </label>
         </div>

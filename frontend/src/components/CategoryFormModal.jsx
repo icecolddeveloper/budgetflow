@@ -55,7 +55,7 @@ export function CategoryFormModal({ category, onClose, onSubmit }) {
   return (
     <ModalShell
       title={category ? "Edit category" : "Add category"}
-      description="Create a clear home for each stream of money in your plan."
+      description="Each category is an envelope your money lives in."
       onClose={onClose}
     >
       <form className="modal-form" onSubmit={handleSubmit}>
@@ -89,7 +89,7 @@ export function CategoryFormModal({ category, onClose, onSubmit }) {
               rows="3"
               value={form.description}
               onChange={updateField}
-              placeholder="What types of purchases or goals belong here?"
+              placeholder="What goes in this envelope? Add a note."
             />
           </label>
 

@@ -63,7 +63,7 @@ export function DashboardPage() {
   async function handleTransactionCreate(payload) {
     try {
       await budgetApi.createTransaction(payload);
-      toast.success("Transaction saved", "Your balances and charts were refreshed.");
+      toast.success("Transaction saved", "Your balances and charts are up to date.");
       setShowTransactionModal(false);
       await loadDashboard();
     } catch (error) {
@@ -73,15 +73,15 @@ export function DashboardPage() {
   }
 
   if (loading) {
-    return <LoadingState message="Loading your financial overview..." />;
+    return <LoadingState message="Loading your dashboard..." />;
   }
 
   if (!dashboard) {
     return (
       <EmptyState
         eyebrow="Dashboard unavailable"
-        title="We could not load your budget workspace"
-        description="Try refreshing the page once your backend is running."
+        title="We couldn't load your dashboard"
+        description="Try refreshing once the backend is back up."
       />
     );
   }
@@ -105,10 +105,10 @@ export function DashboardPage() {
       <section className="hero-banner">
         <div>
           <span className="eyebrow">This month</span>
-          <h2>{formatCurrency(dashboard.total_balance)} available across your plan</h2>
+          <h2>{formatCurrency(dashboard.total_balance)} ready to use across your envelopes</h2>
           <p>
-            Keep an eye on category health, recent activity, and how cash is moving in and out of
-            your budget.
+            Take a look at how your categories are doing, what's moved lately, and where your
+            money is flowing.
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setShowTransactionModal(true)}>
@@ -140,7 +140,7 @@ export function DashboardPage() {
           label="Active categories"
           value={dashboard.category_count}
           accent="neutral"
-          meta="Buckets currently in your system"
+          meta="Envelopes you're tracking"
         />
       </section>
 
@@ -153,7 +153,7 @@ export function DashboardPage() {
           <CashflowChart data={trendData} />
         </SectionCard>
 
-        <SectionCard title="Spending mix" subtitle="Where your outflow is concentrated right now">
+        <SectionCard title="Spending mix" subtitle="Where most of your spending is going">
           {spendingData.length ? (
             <>
               <SpendingChart data={spendingData} />
@@ -172,8 +172,8 @@ export function DashboardPage() {
           ) : (
             <EmptyState
               eyebrow="No outflow yet"
-              title="Your chart will come alive with activity"
-              description="Create a withdrawal or transfer to start building a spending view."
+              title="Your chart is waiting for some action"
+              description="Log an expense or transfer to start seeing where your money goes."
               action={
                 <button type="button" className="btn btn-secondary" onClick={() => setShowTransactionModal(true)}>
                   <Plus size={16} />
@@ -205,20 +205,20 @@ export function DashboardPage() {
           ) : (
             <EmptyState
               eyebrow="No categories"
-              title="Start shaping your budget"
-              description="Add your first category to organize how money should move."
+              title="Let's start your budget"
+              description="Create your first category and decide where money should go."
             />
           )}
         </SectionCard>
 
-        <SectionCard title="Recent activity" subtitle="The latest money movement across your plan">
+        <SectionCard title="Recent activity" subtitle="Your latest money moves">
           {dashboard.recent_transactions.length ? (
             <TransactionsList transactions={dashboard.recent_transactions} compact />
           ) : (
             <EmptyState
               eyebrow="No activity yet"
-              title="Your ledger is ready"
-              description="Once you add a transaction, it will appear here with timestamps and context."
+              title="You're all set"
+              description="Your transactions will show up here as soon as you add one."
             />
           )}
         </SectionCard>

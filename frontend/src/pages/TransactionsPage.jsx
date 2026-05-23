@@ -51,7 +51,7 @@ export function TransactionsPage() {
   async function handleSubmit(payload) {
     try {
       await budgetApi.createTransaction(payload);
-      toast.success("Transaction saved", "Your ledger and category balances are updated.");
+      toast.success("Transaction saved", "Your balances are up to date.");
       setShowModal(false);
       await loadData();
     } catch (error) {
@@ -61,7 +61,7 @@ export function TransactionsPage() {
   }
 
   if (loading) {
-    return <LoadingState message="Loading your transaction history..." />;
+    return <LoadingState message="Loading your transactions..." />;
   }
 
   const filteredTransactions = transactions.filter((transaction) => {
@@ -97,11 +97,11 @@ export function TransactionsPage() {
     <div className="page-stack">
       <section className="hero-banner">
         <div>
-          <span className="eyebrow">Activity feed</span>
-          <h2>Stay close to every deposit, withdrawal, and category transfer</h2>
+          <span className="eyebrow">Recent activity</span>
+          <h2>Every dollar moving through your envelopes</h2>
           <p>
-            Search history instantly, review the latest money movement, and capture new actions in
-            one place.
+            Search past activity, see what's moved lately, and log something new — all in one
+            place.
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>
@@ -115,23 +115,23 @@ export function TransactionsPage() {
           label="Transactions"
           value={transactions.length}
           accent="neutral"
-          meta="Recorded in your ledger"
+          meta="Logged so far"
         />
         <StatCard
           label="Total deposits"
           value={formatCurrency(depositTotal)}
           accent="success"
-          meta="Funds added to categories"
+          meta="Money that came in"
         />
         <StatCard
           label="Total outflow"
           value={formatCurrency(outflowTotal)}
           accent="warning"
-          meta="Expenses and allocations"
+          meta="Spending and allocations"
         />
       </section>
 
-      <SectionCard title="Transaction history" subtitle="Filter and search your ledger without losing detail">
+      <SectionCard title="Transaction history" subtitle="Search and filter without losing the details">
         <div className="toolbar">
           <div className="search-field">
             <Search size={16} />
@@ -161,8 +161,8 @@ export function TransactionsPage() {
         ) : (
           <EmptyState
             eyebrow="No matching transactions"
-            title="Nothing matches your current filters"
-            description="Try a different keyword, switch the filter, or create a new transaction."
+            title="No matches yet"
+            description="Try a different search, change the filter, or add a new transaction."
             action={
               <button type="button" className="btn btn-secondary" onClick={() => setShowModal(true)}>
                 <Plus size={16} />

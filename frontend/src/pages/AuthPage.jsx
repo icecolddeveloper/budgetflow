@@ -158,7 +158,7 @@ export function AuthPage() {
       } catch {
         /* ignore storage errors */
       }
-      toast.success("Welcome back", "Your financial dashboard is ready.");
+      toast.success("Welcome back!", "Let's see how your money's doing.");
       navigate(nextPath, { replace: true });
     } catch (error) {
       const fieldErrors = extractFieldErrors(error.data, LOGIN_FIELDS);
@@ -200,7 +200,7 @@ export function AuthPage() {
         email: registerForm.email.trim(),
         first_name: registerForm.first_name.trim(),
       });
-      toast.success("Account created", "Starter categories were added to your workspace.");
+      toast.success("You're in!", "We added a few starter categories to get you going.");
       navigate("/dashboard", { replace: true });
     } catch (error) {
       const fieldErrors = extractFieldErrors(error.data, REGISTER_FIELDS);
@@ -227,11 +227,11 @@ export function AuthPage() {
         </div>
 
         <div className="auth-copy">
-          <span className="eyebrow">Modern money planning</span>
-          <h1>Build a healthier budget rhythm without the spreadsheet drag.</h1>
+          <span className="eyebrow">Money, made friendly</span>
+          <h1>Build a healthier budget rhythm — no spreadsheets required.</h1>
           <p>
-            Organize categories, move money instantly, and see your spending story in a polished
-            dashboard that feels calm on every screen.
+            Organize your envelopes, move money in a tap, and see exactly where your spending
+            goes on a calm, friendly dashboard.
           </p>
         </div>
 
@@ -367,8 +367,8 @@ export function AuthPage() {
         ) : (
           <form className="auth-form" onSubmit={handleRegister}>
             <div className="auth-heading">
-              <h2>Start your budget workspace</h2>
-              <p>Create an account and get starter categories instantly.</p>
+              <h2>Let's get you set up</h2>
+              <p>We'll add a few starter categories so you can jump right in.</p>
             </div>
 
             <div className="form-grid">

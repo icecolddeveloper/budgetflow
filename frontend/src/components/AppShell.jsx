@@ -22,16 +22,16 @@ const navigation = [
 
 const pageMeta = {
   "/dashboard": {
-    title: "Financial command center",
-    description: "Track the flow of every dollar and keep your categories healthy.",
+    title: "Financial hub",
+    description: "Here's how your money's doing right now.",
   },
   "/categories": {
-    title: "Category planning",
-    description: "Shape the budgets, targets, and visual labels behind your money system.",
+    title: "Your categories",
+    description: "Adjust your envelopes, set targets, and pick colors that fit.",
   },
   "/transactions": {
-    title: "Ledger activity",
-    description: "Capture deposits, withdrawals, and transfers with a clean operational view.",
+    title: "Your transactions",
+    description: "Every dollar in, out, and across your envelopes — all in one place.",
   },
 };
 
@@ -74,7 +74,7 @@ export function AppShell() {
           </span>
           <div>
             <strong>BudgetFlow</strong>
-            <p>Premium personal finance workspace</p>
+            <p>Your friendly money companion</p>
           </div>
         </div>
 
@@ -95,10 +95,10 @@ export function AppShell() {
         </nav>
 
         <div className="sidebar-cta">
-          <p>Keep every category funded and every decision visible.</p>
+          <p>Got something new to log? Income, expense, or a quick transfer — add it from here.</p>
           <button type="button" className="btn btn-secondary" onClick={() => navigate("/transactions")}>
             <Plus size={16} />
-            Quick add from any page
+            Add a transaction
           </button>
         </div>
       </aside>
@@ -113,7 +113,7 @@ export function AppShell() {
           </div>
 
           <div className="app-header__titles">
-            <span className="eyebrow">Budget workspace</span>
+            <span className="eyebrow">Your money</span>
             <h1>{currentMeta.title}</h1>
             <p>{currentMeta.description}</p>
           </div>
@@ -124,7 +124,7 @@ export function AppShell() {
               <span>{initial}</span>
               <div>
                 <strong>{user?.first_name || user?.username}</strong>
-                <p>{user?.email || "Your secure budget account"}</p>
+                <p>{user?.email || "Signed in"}</p>
               </div>
             </div>
             <button type="button" className="btn btn-ghost" onClick={handleLogout}>
@@ -181,7 +181,7 @@ export function AppShell() {
               <span className="mobile-drawer__avatar">{initial}</span>
               <div>
                 <strong>{user?.first_name || user?.username}</strong>
-                <p>{user?.email || "Your budget account"}</p>
+                <p>{user?.email || "Signed in"}</p>
               </div>
             </div>
 

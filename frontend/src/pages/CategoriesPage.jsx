@@ -37,10 +37,10 @@ export function CategoriesPage() {
     try {
       if (editingCategory) {
         await budgetApi.updateCategory(editingCategory.id, payload);
-        toast.success("Category updated", "Your category settings are now live.");
+        toast.success("Category updated", "Your changes are saved.");
       } else {
         await budgetApi.createCategory(payload);
-        toast.success("Category created", "A new budget bucket was added successfully.");
+        toast.success("Category added", "Your new envelope is ready to go.");
       }
       setShowModal(false);
       setEditingCategory(null);
@@ -60,7 +60,7 @@ export function CategoriesPage() {
 
     try {
       await budgetApi.deleteCategory(category.id);
-      toast.success("Category deleted", "The category was removed from your plan.");
+      toast.success("Category removed", "It's no longer in your plan.");
       await loadCategories();
     } catch (error) {
       toast.error("Could not delete category", error.message);
@@ -68,7 +68,7 @@ export function CategoriesPage() {
   }
 
   if (loading) {
-    return <LoadingState message="Loading category balances..." />;
+    return <LoadingState message="Loading your categories..." />;
   }
 
   const totalBalance = categories.reduce((sum, category) => sum + Number(category.balance), 0);
@@ -78,11 +78,11 @@ export function CategoriesPage() {
     <div className="page-stack">
       <section className="hero-banner">
         <div>
-          <span className="eyebrow">Category system</span>
-          <h2>Shape the buckets that define your budget strategy</h2>
+          <span className="eyebrow">Your envelopes</span>
+          <h2>Plan the envelopes that hold your money</h2>
           <p>
-            Give each stream of money a clear purpose with visual labels, target amounts, and
-            current balances.
+            Give each part of your budget a name, a color, and a monthly target — make it
+            yours.
           </p>
         </div>
         <button
@@ -103,13 +103,13 @@ export function CategoriesPage() {
           label="Categories"
           value={categories.length}
           accent="neutral"
-          meta="Active budget buckets"
+          meta="Envelopes in your plan"
         />
         <StatCard
           label="Allocated balance"
           value={formatCurrency(totalBalance)}
           accent="success"
-          meta="Money currently sitting in categories"
+          meta="Money tucked into your envelopes"
         />
         <StatCard
           label="Monthly targets"
@@ -121,7 +121,7 @@ export function CategoriesPage() {
 
       <SectionCard
         title="All categories"
-        subtitle="Edit names, colors, icons, and monthly targets as your plan evolves"
+        subtitle="Tweak names, colors, icons, and monthly targets any time"
       >
         {categories.length ? (
           <div className="category-grid category-grid--full">
@@ -140,8 +140,8 @@ export function CategoriesPage() {
         ) : (
           <EmptyState
             eyebrow="No categories yet"
-            title="Create your first budget bucket"
-            description="Start with food, rent, or savings and build the structure of your plan from there."
+            title="Add your first category"
+            description="Try starting with food, rent, or savings — you can always change them later."
             action={
               <button
                 type="button"

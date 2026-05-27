@@ -205,6 +205,52 @@ class CategoryApiTests(TestCase):
         names = {item["name"] for item in response.json()}
         self.assertEqual(names, {"Mine"})
 
+    def test_list_reports_month_to_date_spending_and_progress(self):
+        food = make_category(
+            self.user, "Food", "food", balance="100.00", monthly_budget="200.00"
+        )
+        # Withdraw this month — counts toward month_spending.
+        create_transaction(
+            user=self.user,
+            kind=Transaction.Kind.WITHDRAW,
+            amount="50.00",
+            source_category=food,
+        )
+        # A withdraw stamped to last month — must NOT count.
+        stale = create_transaction(
+            user=self.user,
+            kind=Transaction.Kind.WITHDRAW,
+            amount="40.00",
+            source_category=food,
+        )
+        Transaction.objects.filter(pk=stale.pk).update(
+            occurred_at=timezone.now().replace(day=1) - timedelta(days=5)
+        )
+
+        response = self.client.get("/api/categories/")
+
+        self.assertEqual(response.status_code, 200)
+        item = next(row for row in response.json() if row["name"] == "Food")
+        self.assertEqual(Decimal(item["month_spending"]), Decimal("50.00"))
+        self.assertEqual(Decimal(item["budget_progress"]), Decimal("25.00"))
+
+    def test_budget_progress_exceeds_100_when_over_budget(self):
+        rent = make_category(
+            self.user, "Rent", "rent", balance="1000.00", monthly_budget="100.00"
+        )
+        create_transaction(
+            user=self.user,
+            kind=Transaction.Kind.WITHDRAW,
+            amount="150.00",
+            source_category=rent,
+        )
+
+        response = self.client.get("/api/categories/")
+
+        item = next(row for row in response.json() if row["name"] == "Rent")
+        self.assertEqual(Decimal(item["month_spending"]), Decimal("150.00"))
+        self.assertGreater(Decimal(item["budget_progress"]), Decimal("100.00"))
+
 
 class TransactionApiTests(TestCase):
     def setUp(self):

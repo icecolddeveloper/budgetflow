@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from decimal import Decimal
 
+from django.db.models import Q, Sum
 from django.utils import timezone
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.exceptions import ValidationError
@@ -18,12 +19,25 @@ def shift_month(value, offset):
     return value.replace(year=year, month=month, day=1)
 
 
+def categories_with_month_spending(user):
+    start_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return Category.objects.filter(user=user).annotate(
+        month_spending=Sum(
+            "outgoing_transactions__amount",
+            filter=Q(
+                outgoing_transactions__kind=Transaction.Kind.WITHDRAW,
+                outgoing_transactions__occurred_at__gte=start_of_month,
+            ),
+        )
+    )
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Category.objects.filter(user=self.request.user).order_by("-balance", "name")
+        return categories_with_month_spending(self.request.user).order_by("-balance", "name")
 
     def perform_create(self, serializer):
         serializer.save()
@@ -63,7 +77,7 @@ class DashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        categories = list(Category.objects.filter(user=request.user).order_by("-balance", "name"))
+        categories = list(categories_with_month_spending(request.user).order_by("-balance", "name"))
         transactions = list(
             Transaction.objects.filter(user=request.user)
             .select_related("source_category", "destination_category")

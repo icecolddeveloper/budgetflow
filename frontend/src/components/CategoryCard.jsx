@@ -6,6 +6,14 @@ import { resolveCategoryIcon } from "../utils/icons";
 export function CategoryCard({ category, onEdit, onDelete, compact = false }) {
   const Icon = resolveCategoryIcon(category.icon);
 
+  const monthlyBudget = Number(category.monthly_budget || 0);
+  const monthSpending = Number(category.month_spending || 0);
+  const progress = Number(category.budget_progress || 0);
+  const showProgress = monthlyBudget > 0;
+  const overBudget = showProgress && monthSpending > monthlyBudget;
+  const fillPercent = Math.min(Math.max(progress, 0), 100);
+  const tone = overBudget ? "danger" : progress >= 80 ? "warning" : "success";
+
   return (
     <article className={`surface-card category-card ${compact ? "category-card--compact" : ""}`}>
       <div className="category-card__header">
@@ -48,6 +56,29 @@ export function CategoryCard({ category, onEdit, onDelete, compact = false }) {
           <strong>{formatCurrency(category.balance)}</strong>
         </div>
       </div>
+
+      {showProgress ? (
+        <div className={`budget-progress budget-progress--${tone}`}>
+          <div className="budget-progress__row">
+            <span className="metric-label">
+              {overBudget ? "Over budget this month" : "Spent this month"}
+            </span>
+            <span className="budget-progress__amount">
+              {formatCurrency(monthSpending)} / {formatCurrency(monthlyBudget)}
+            </span>
+          </div>
+          <div
+            className="budget-progress__track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(fillPercent)}
+            aria-label={`${category.name} budget used`}
+          >
+            <span className="budget-progress__fill" style={{ width: `${fillPercent}%` }} />
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }

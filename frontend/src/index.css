@@ -977,6 +977,59 @@ p {
   font-size: 1.1rem;
 }
 
+.budget-progress {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.budget-progress__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.budget-progress__amount {
+  font-weight: 600;
+  color: var(--muted-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-progress__track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  overflow: hidden;
+}
+
+.budget-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 240ms ease;
+}
+
+.budget-progress--warning .budget-progress__fill {
+  background: var(--warning);
+}
+
+.budget-progress--warning .budget-progress__amount {
+  color: var(--warning);
+}
+
+.budget-progress--danger .budget-progress__fill {
+  background: var(--danger);
+}
+
+.budget-progress--danger .budget-progress__amount,
+.budget-progress--danger .metric-label {
+  color: var(--danger);
+}
+
 .progress-block {
   display: grid;
   gap: 10px;

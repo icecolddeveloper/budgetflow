@@ -15,6 +15,8 @@ HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 class CategorySerializer(serializers.ModelSerializer):
     remaining_budget = serializers.SerializerMethodField()
     utilization = serializers.SerializerMethodField()
+    month_spending = serializers.SerializerMethodField()
+    budget_progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -30,6 +32,8 @@ class CategorySerializer(serializers.ModelSerializer):
             "is_primary",
             "remaining_budget",
             "utilization",
+            "month_spending",
+            "budget_progress",
             "created_at",
             "updated_at",
         )
@@ -81,6 +85,19 @@ class CategorySerializer(serializers.ModelSerializer):
         if obj.monthly_budget == 0:
             return Decimal("0.00")
         progress = min(obj.balance / obj.monthly_budget, Decimal("1.00"))
+        return round(progress * Decimal("100"), 2)
+
+    def _month_spending(self, obj):
+        value = getattr(obj, "month_spending", None)
+        return value if value is not None else Decimal("0.00")
+
+    def get_month_spending(self, obj):
+        return self._month_spending(obj)
+
+    def get_budget_progress(self, obj):
+        if obj.monthly_budget == 0:
+            return Decimal("0.00")
+        progress = self._month_spending(obj) / obj.monthly_budget
         return round(progress * Decimal("100"), 2)
 
 

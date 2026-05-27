@@ -29,3 +29,6 @@ Thumbs.db
 
 # Agent / assistant local state
 .claude/
+
+# Local-only notes (memos, drafts, private planning)
+private/

@@ -40,7 +40,6 @@ const PREVIEW_ROWS = [
 ];
 
 const HERO_STATS = [
-  { value: "4.9★", label: "Average rating" },
   { value: "12K+", label: "Households planning" },
   { value: "$240M", label: "Tracked this year" },
 ];

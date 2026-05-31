@@ -70,9 +70,62 @@ class Transaction(models.Model):
     destination_category_name = models.CharField(max_length=80, blank=True)
     occurred_at = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
+    recurring_rule = models.ForeignKey(
+        "RecurringRule",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_transactions",
+    )
 
     class Meta:
         ordering = ("-occurred_at", "-created_at")
 
     def __str__(self):
         return f"{self.kind} {self.amount} for {self.user.username}"
+
+
+class RecurringRule(models.Model):
+    class Frequency(models.TextChoices):
+        WEEKLY = "weekly", "Weekly"
+        BIWEEKLY = "biweekly", "Every two weeks"
+        MONTHLY = "monthly", "Monthly"
+        YEARLY = "yearly", "Yearly"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="recurring_rules",
+    )
+    name = models.CharField(max_length=80)
+    kind = models.CharField(max_length=12, choices=Transaction.Kind.choices)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.CharField(max_length=255, blank=True)
+    source_category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="outgoing_recurring_rules",
+    )
+    destination_category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="incoming_recurring_rules",
+    )
+    frequency = models.CharField(max_length=12, choices=Frequency.choices)
+    next_run_at = models.DateTimeField()
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=255, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("next_run_at", "name")
+
+    def __str__(self):
+        return f"{self.name} ({self.get_frequency_display()}) for {self.user.username}"

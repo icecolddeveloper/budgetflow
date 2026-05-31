@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.text import slugify
 from rest_framework import serializers
 
-from .models import Category, Transaction
+from .models import Category, RecurringRule, Transaction
 from .services import create_transaction
 
 
@@ -120,6 +120,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "title",
             "occurred_at",
             "created_at",
+            "recurring_rule",
         )
 
     def get_source_category_label(self, obj):
@@ -202,3 +203,106 @@ class TransactionCreateSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         return TransactionSerializer(instance, context=self.context).data
+
+
+class RecurringRuleSerializer(serializers.ModelSerializer):
+    source_category_label = serializers.SerializerMethodField()
+    destination_category_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecurringRule
+        fields = (
+            "id",
+            "name",
+            "kind",
+            "amount",
+            "description",
+            "source_category",
+            "destination_category",
+            "source_category_label",
+            "destination_category_label",
+            "frequency",
+            "next_run_at",
+            "last_run_at",
+            "last_error",
+            "end_date",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "last_run_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context["request"].user
+        queryset = Category.objects.filter(user=user).order_by("name")
+        self.fields["source_category"].queryset = queryset
+        self.fields["destination_category"].queryset = queryset
+
+    def get_source_category_label(self, obj):
+        return obj.source_category.name if obj.source_category else ""
+
+    def get_destination_category_label(self, obj):
+        return obj.destination_category.name if obj.destination_category else ""
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate_name(self, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Give this rule a short name.")
+        return cleaned
+
+    def validate(self, attrs):
+        kind = attrs.get("kind") or getattr(self.instance, "kind", None)
+        source = attrs.get("source_category", getattr(self.instance, "source_category", None))
+        destination = attrs.get(
+            "destination_category", getattr(self.instance, "destination_category", None)
+        )
+        end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        next_run_at = attrs.get("next_run_at", getattr(self.instance, "next_run_at", None))
+
+        if kind == Transaction.Kind.DEPOSIT:
+            if not destination:
+                raise serializers.ValidationError(
+                    {"destination_category": "Choose a category to fund."}
+                )
+            attrs["source_category"] = None
+        elif kind == Transaction.Kind.WITHDRAW:
+            if not source:
+                raise serializers.ValidationError(
+                    {"source_category": "Choose a category to spend from."}
+                )
+            attrs["destination_category"] = None
+        elif kind == Transaction.Kind.TRANSFER:
+            if not source:
+                raise serializers.ValidationError(
+                    {"source_category": "Choose a source category."}
+                )
+            if not destination:
+                raise serializers.ValidationError(
+                    {"destination_category": "Choose a destination category."}
+                )
+            if source == destination:
+                raise serializers.ValidationError(
+                    {"destination_category": "Source and destination must be different."}
+                )
+
+        if end_date and next_run_at and end_date < next_run_at.date():
+            raise serializers.ValidationError(
+                {"end_date": "End date must be on or after the first run."}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)

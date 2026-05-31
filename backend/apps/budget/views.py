@@ -8,8 +8,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Transaction
-from .serializers import CategorySerializer, TransactionCreateSerializer, TransactionSerializer
+from .models import Category, RecurringRule, Transaction
+from .serializers import (
+    CategorySerializer,
+    RecurringRuleSerializer,
+    TransactionCreateSerializer,
+    TransactionSerializer,
+)
+from .services import process_due_recurring_rules
 
 
 def shift_month(value, offset):
@@ -58,6 +64,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TransactionViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    def list(self, request, *args, **kwargs):
+        process_due_recurring_rules(request.user)
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = Transaction.objects.filter(user=self.request.user).select_related(
             "source_category", "destination_category"
@@ -73,10 +83,21 @@ class TransactionViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewset
         return TransactionSerializer
 
 
+class RecurringRuleViewSet(viewsets.ModelViewSet):
+    serializer_class = RecurringRuleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return RecurringRule.objects.filter(user=self.request.user).select_related(
+            "source_category", "destination_category"
+        )
+
+
 class DashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        process_due_recurring_rules(request.user)
         categories = list(categories_with_month_spending(request.user).order_by("-balance", "name"))
         transactions = list(
             Transaction.objects.filter(user=request.user)

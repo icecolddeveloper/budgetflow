@@ -7,8 +7,12 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.budget.models import Category, Transaction
-from apps.budget.services import create_transaction
+from apps.budget.models import Category, RecurringRule, Transaction
+from apps.budget.services import (
+    advance_next_run,
+    create_transaction,
+    process_due_recurring_rules,
+)
 
 
 def make_category(user, name, slug, *, balance="0.00", monthly_budget="0.00", color="#0f766e"):
@@ -337,3 +341,208 @@ class DashboardApiTests(TestCase):
         # Wallet: +200 -30 = 170, Food: +999 (historical)
         self.assertEqual(Decimal(payload["total_balance"]), Decimal("1169.00"))
         self.assertEqual(payload["category_count"], 2)
+
+
+class RecurringRuleServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="rae", password="StrongPass123")
+        self.wallet = make_category(self.user, "Wallet", "wallet", balance="2000.00")
+        self.rent = make_category(self.user, "Rent", "rent", balance="0.00")
+
+    def _make_rule(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "name": "Rent",
+            "kind": Transaction.Kind.TRANSFER,
+            "amount": Decimal("1200.00"),
+            "description": "Monthly rent",
+            "source_category": self.wallet,
+            "destination_category": self.rent,
+            "frequency": RecurringRule.Frequency.MONTHLY,
+            "next_run_at": timezone.now() - timedelta(minutes=1),
+            "is_active": True,
+        }
+        defaults.update(overrides)
+        return RecurringRule.objects.create(**defaults)
+
+    def test_advance_monthly_clamps_to_last_day_of_short_month(self):
+        from datetime import datetime
+
+        result = advance_next_run(
+            timezone.make_aware(datetime(2026, 1, 31, 9, 0)),
+            RecurringRule.Frequency.MONTHLY,
+        )
+        self.assertEqual(result.month, 2)
+        self.assertEqual(result.day, 28)
+
+    def test_advance_weekly_adds_seven_days(self):
+        from datetime import datetime
+
+        result = advance_next_run(
+            timezone.make_aware(datetime(2026, 5, 1, 9, 0)),
+            RecurringRule.Frequency.WEEKLY,
+        )
+        self.assertEqual(result.day, 8)
+
+    def test_advance_yearly_handles_leap_day(self):
+        from datetime import datetime
+
+        result = advance_next_run(
+            timezone.make_aware(datetime(2024, 2, 29, 9, 0)),
+            RecurringRule.Frequency.YEARLY,
+        )
+        self.assertEqual(result.year, 2025)
+        self.assertEqual(result.day, 28)
+
+    def test_process_due_rule_creates_transaction_and_advances(self):
+        rule = self._make_rule()
+
+        created = process_due_recurring_rules(self.user)
+
+        self.assertEqual(len(created), 1)
+        self.wallet.refresh_from_db()
+        self.rent.refresh_from_db()
+        rule.refresh_from_db()
+        self.assertEqual(self.wallet.balance, Decimal("800.00"))
+        self.assertEqual(self.rent.balance, Decimal("1200.00"))
+        self.assertGreater(rule.next_run_at, timezone.now())
+        self.assertEqual(created[0].recurring_rule_id, rule.pk)
+        self.assertEqual(rule.last_error, "")
+
+    def test_process_skips_inactive_rule(self):
+        self._make_rule(is_active=False)
+
+        created = process_due_recurring_rules(self.user)
+
+        self.assertEqual(created, [])
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_process_catches_up_multiple_missed_runs(self):
+        # Three months overdue.
+        rule = self._make_rule(
+            amount=Decimal("100.00"),
+            next_run_at=timezone.now() - timedelta(days=95),
+        )
+
+        created = process_due_recurring_rules(self.user)
+
+        rule.refresh_from_db()
+        self.assertGreaterEqual(len(created), 3)
+        self.assertGreater(rule.next_run_at, timezone.now())
+
+    def test_process_records_error_and_stops_when_funds_insufficient(self):
+        rule = self._make_rule(
+            kind=Transaction.Kind.WITHDRAW,
+            source_category=self.rent,
+            destination_category=None,
+            amount=Decimal("9999.00"),
+        )
+
+        created = process_due_recurring_rules(self.user)
+
+        rule.refresh_from_db()
+        self.assertEqual(created, [])
+        self.assertIn("available", rule.last_error)
+        # next_run_at must NOT advance on failure — should retry next time.
+        self.assertLess(rule.next_run_at, timezone.now())
+
+    def test_process_deactivates_rule_past_end_date(self):
+        rule = self._make_rule(
+            amount=Decimal("50.00"),
+            end_date=timezone.now().date() - timedelta(days=1),
+            next_run_at=timezone.now() - timedelta(days=10),
+        )
+
+        process_due_recurring_rules(self.user)
+
+        rule.refresh_from_db()
+        self.assertFalse(rule.is_active)
+
+
+class RecurringRuleApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="mel", password="StrongPass123")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.wallet = make_category(self.user, "Wallet", "wallet", balance="500.00")
+        self.utilities = make_category(self.user, "Utilities", "utilities", balance="0.00")
+
+    def test_create_rule_returns_201_and_persists(self):
+        payload = {
+            "name": "Electric bill",
+            "kind": "transfer",
+            "amount": "75.00",
+            "description": "Power",
+            "source_category": self.wallet.pk,
+            "destination_category": self.utilities.pk,
+            "frequency": "monthly",
+            "next_run_at": (timezone.now() + timedelta(days=3)).isoformat(),
+        }
+
+        response = self.client.post("/api/recurring-rules/", data=payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(RecurringRule.objects.count(), 1)
+
+    def test_list_scoped_to_request_user(self):
+        RecurringRule.objects.create(
+            user=self.user,
+            name="Mine",
+            kind=Transaction.Kind.DEPOSIT,
+            amount=Decimal("10.00"),
+            destination_category=self.wallet,
+            frequency=RecurringRule.Frequency.WEEKLY,
+            next_run_at=timezone.now() + timedelta(days=1),
+        )
+        other = User.objects.create_user(username="other", password="StrongPass123")
+        other_wallet = make_category(other, "Wallet", "wallet", balance="0.00")
+        RecurringRule.objects.create(
+            user=other,
+            name="Theirs",
+            kind=Transaction.Kind.DEPOSIT,
+            amount=Decimal("10.00"),
+            destination_category=other_wallet,
+            frequency=RecurringRule.Frequency.WEEKLY,
+            next_run_at=timezone.now() + timedelta(days=1),
+        )
+
+        response = self.client.get("/api/recurring-rules/")
+
+        self.assertEqual(response.status_code, 200)
+        names = {item["name"] for item in response.json()}
+        self.assertEqual(names, {"Mine"})
+
+    def test_transactions_list_processes_due_rules(self):
+        RecurringRule.objects.create(
+            user=self.user,
+            name="Auto-allocate",
+            kind=Transaction.Kind.TRANSFER,
+            amount=Decimal("25.00"),
+            source_category=self.wallet,
+            destination_category=self.utilities,
+            frequency=RecurringRule.Frequency.WEEKLY,
+            next_run_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        response = self.client.get("/api/transactions/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+        self.utilities.refresh_from_db()
+        self.assertEqual(self.utilities.balance, Decimal("25.00"))
+
+    def test_create_rejects_transfer_with_same_source_and_destination(self):
+        payload = {
+            "name": "Bad",
+            "kind": "transfer",
+            "amount": "10.00",
+            "source_category": self.wallet.pk,
+            "destination_category": self.wallet.pk,
+            "frequency": "monthly",
+            "next_run_at": (timezone.now() + timedelta(days=1)).isoformat(),
+        }
+
+        response = self.client.post("/api/recurring-rules/", data=payload, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("destination_category", response.json())

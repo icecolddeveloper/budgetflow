@@ -1,6 +1,6 @@
 # BudgetFlow
 
-A full-stack envelope budgeting app — Django REST API + React SPA with JWT auth, per-category balances, and a polished dashboard. Built as a portfolio-ready demonstration of a complete product end to end.
+A full-stack envelope budgeting app — Django REST API + React SPA with JWT auth, per-category balances, and a polished dashboard.
 
 > Status: in active development.
 
@@ -21,27 +21,6 @@ A full-stack envelope budgeting app — Django REST API + React SPA with JWT aut
 ## Quick Start
 
 Run the backend and frontend in two terminals. Both folders ship a `.env.example` — copy it to `.env` and fill in the values before starting.
-
-### Backend — `backend/`
-
-```powershell
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-py manage.py migrate
-py manage.py runserver
-```
-
-### Frontend — `frontend/`
-
-```powershell
-npm.cmd install
-Copy-Item .env.example .env
-npm.cmd run dev
-```
-
-Default ports follow Django and Vite conventions.
 
 ## Reviewer Demo
 
